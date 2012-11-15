@@ -1,0 +1,7 @@
+[submodule "external/tlsdate"]
+	path = external/tlsdate
+	url = https://github.com/ioerror/tlsdate.git
+
+[submodule "external/openssl"]
+	path = external/openssl
+	url = https://github.com/guardianproject/openssl-android.git
