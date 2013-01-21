@@ -3,6 +3,8 @@ LOCAL_PATH := $(shell pwd)
 
 PROJECT_ROOT = $(LOCAL_PATH)/..
 EXTERNAL_ROOT = $(PROJECT_ROOT)/external
+DESTDIR = $(EXTERNAL_ROOT)
+prefix = /data/data/info.guardianproject.tlsdate/app_opt
 
 # Android NDK setup
 NDK_COMPILER_VERSION=4.6
@@ -29,7 +31,7 @@ AR := $(NDK_TOOLCHAIN)/bin/arm-linux-androideabi-ar
 RANLIB := $(NDK_TOOLCHAIN)/bin/arm-linux-androideabi-ranlib
 STRIP := $(NDK_TOOLCHAIN)/bin/arm-linux-androideabi-strip \
 
-all: openssl/libs/armeabi/libcrypto.so tlsdate-build
+all: openssl/libs/armeabi/libcrypto.so tlsdate-build tlsdate-install assets
 
 openssl/libs/armeabi/libcrypto.so:
 	cd openssl && ndk-build -j4
@@ -39,6 +41,9 @@ openssl-clean:
 
 openssl-distclean:
 	-cd openssl && ndk-build distclean
+
+#openssl-install: 
+	#obj/local/armeabi
 
 tlsdate/configure: tlsdate/configure.ac
 	cd tlsdate && ./autogen.sh
@@ -53,13 +58,33 @@ tlsdate-build: tlsdate/configure
 			--disable-languages \
 			--enable-static \
 			--host=$(HOST) \
-			--prefix=$(LOCAL) && make CFLAGS="$(CFLAGS)" LDFLAGS="$(LOCAL_LDFLAGS)"
+			--prefix=$(prefix) \
+			--exec-prefix=$(prefix) && make CFLAGS="$(CFLAGS)" LDFLAGS="$(LOCAL_LDFLAGS)"
+
+tlsdate-install:
+	make -C tlsdate install DESTDIR=$(DESTDIR)
 
 tlsdate-clean:
 	-make -C tlsdate clean
 
 tlsdate-distclean:
 	-make -C tlsdate distclean
+
+
+ASSETS := $(PROJECT_ROOT)/assets
+assets:
+	install -d $(ASSETS)
+	-rm -rf $(ASSETS)/*
+	cp -a $(EXTERNAL_ROOT)/$(prefix)/* $(ASSETS)
+	#TODO remove unnecessary stuff
+	rm -rf $(ASSETS)/share/man
+	# remove lib symlinks since Android AssetManager copies them as files
+	rm -rf $(ASSETS)/lib/*.so
+	for f in $(ASSETS)/lib/*.so.*; do \
+		echo $$f; \
+		test ! -L $$f || \
+			(rm $$f && mv $$f.[0-9]* $$f); \
+	done
 
 clean: openssl-clean tlsdate-clean
 distclean: openssl-distclean tlsdate-distclean
